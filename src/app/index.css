@@ -148,6 +148,7 @@ select:focus {
   gap: 1rem;
 }
 
+.create-texto-form input[type="text"],
 .create-texto-form textarea {
   padding: 0.75rem;
   border: 1px solid #ddd;

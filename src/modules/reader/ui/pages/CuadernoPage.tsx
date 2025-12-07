@@ -14,6 +14,7 @@ export function CuadernoPage() {
     TextoLecturaListItem[]
   >([]);
   const [newTexto, setNewTexto] = useState('');
+  const [newNombreTexto, setNewNombreTexto] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [selectedMode, setSelectedMode] = useState<'ORACION' | 'PARRAFO'>(
     'ORACION'
@@ -61,9 +62,11 @@ export function CuadernoPage() {
         await container.useCases.createTextoDeLectura.execute({
           textoOriginalId,
           modoSegmentacion: selectedMode,
+          nombre: newNombreTexto.trim() || undefined,
         });
 
       setNewTexto('');
+      setNewNombreTexto('');
       setIsCreating(false);
       await loadTextosDeLectura();
 
@@ -127,6 +130,12 @@ export function CuadernoPage() {
       <div className="new-texto-section">
         {isCreating ? (
           <div className="create-texto-form">
+            <input
+              type="text"
+              value={newNombreTexto}
+              onChange={(e) => setNewNombreTexto(e.target.value)}
+              placeholder="Nombre del texto (opcional)"
+            />
             <textarea
               value={newTexto}
               onChange={(e) => setNewTexto(e.target.value)}
@@ -160,7 +169,15 @@ export function CuadernoPage() {
             </div>
             <div className="form-actions">
               <button onClick={handleCreateTexto}>Crear y Leer</button>
-              <button onClick={() => setIsCreating(false)}>Cancelar</button>
+              <button
+                onClick={() => {
+                  setIsCreating(false);
+                  setNewTexto('');
+                  setNewNombreTexto('');
+                }}
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         ) : (
