@@ -3,8 +3,10 @@ import { getSqlJs, type Database } from './loadSqlJs';
 import { IndexedDbStore } from '../indexeddb/IndexedDbStore';
 import migration001 from '../../migrations/001_init.sql?raw';
 import migration002 from '../../migrations/002_indexes.sql?raw';
+import migration003 from '../../migrations/003_v2_cuadernos.sql?raw';
+import migration004 from '../../migrations/004_v2_indexes.sql?raw';
 
-const MIGRATIONS = [migration001, migration002];
+const MIGRATIONS = [migration001, migration002, migration003, migration004];
 const CURRENT_VERSION = MIGRATIONS.length;
 
 export class SqlJsDatabaseAdapter {
