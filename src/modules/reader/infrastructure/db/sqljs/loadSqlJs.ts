@@ -24,7 +24,7 @@ export async function getSqlJs(): Promise<SqlJsStatic> {
       const baseUrl = import.meta.env.BASE_URL || '/';
 
       sqlJsInstance = await initSqlJs({
-        locateFile: (file) => `${baseUrl}${file}`,
+        locateFile: (file: string) => `${baseUrl}${file}`,
       });
     } catch (error) {
       console.error('Error loading sql.js:', error);
@@ -32,6 +32,9 @@ export async function getSqlJs(): Promise<SqlJsStatic> {
         `No se pudo cargar sql.js: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+  if (!sqlJsInstance) {
+    throw new Error('sql.js no se pudo cargar correctamente');
   }
   return sqlJsInstance;
 }

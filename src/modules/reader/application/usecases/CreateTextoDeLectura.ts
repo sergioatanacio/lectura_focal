@@ -1,5 +1,5 @@
 import { generateId } from '@/shared/domain/ids';
-import { ValidationError, NotFoundError } from '@/shared/application/errors';
+import { NotFoundError } from '@/shared/application/errors';
 import { createTextoDeLectura } from '../../domain/entities/TextoDeLectura';
 import { createFragmento } from '../../domain/entities/Fragmento';
 import { createEstadoLectura } from '../../domain/entities/EstadoLectura';

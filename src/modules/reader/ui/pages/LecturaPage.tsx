@@ -114,10 +114,10 @@ export function LecturaPage() {
   const handleSaveComment = async (text: string) => {
     if (!view?.current_fragmento) return;
 
-    await container.useCases.addComment.execute({
-      unitId: view.current_fragmento.fragmento_id,
-      text,
-    });
+    await container.useCases.addComment.execute(
+      view.current_fragmento.fragmento_id,
+      text
+    );
 
     setShowCommentModal(false);
     await loadView();

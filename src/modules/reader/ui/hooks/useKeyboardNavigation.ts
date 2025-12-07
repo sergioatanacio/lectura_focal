@@ -8,6 +8,9 @@ export interface KeyboardHandlers {
   onSave?: () => void;
   onRead?: () => void;
   onEscape?: () => void;
+  onCancel?: () => void;
+  onComment?: () => void;
+  onToggleFocus?: () => void;
 }
 
 export function useKeyboardNavigation(
@@ -42,11 +45,30 @@ export function useKeyboardNavigation(
       if (e.key === 'Escape') {
         e.preventDefault();
         handlers.onEscape?.();
+        handlers.onCancel?.();
         return;
       }
 
       // Las demás teclas solo funcionan fuera de inputs
       if (isEditable) return;
+
+      // Tecla C para comentar
+      if (e.key === 'c' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+        if (handlers.onComment) {
+          e.preventDefault();
+          handlers.onComment();
+        }
+        return;
+      }
+
+      // Tecla F para toggle focus mode
+      if (e.key === 'f' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+        if (handlers.onToggleFocus) {
+          e.preventDefault();
+          handlers.onToggleFocus();
+        }
+        return;
+      }
 
       if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
         if (handlers.onNext) {
