@@ -105,6 +105,29 @@ export function Sidebar() {
     }
   };
 
+  const handleDeleteCuaderno = async (
+    e: React.MouseEvent,
+    cuadernoId: string,
+    nombreCuaderno: string
+  ) => {
+    e.preventDefault(); // Evitar navegación
+    e.stopPropagation();
+
+    const confirmMessage = `¿Estás seguro de que quieres eliminar el cuaderno "${nombreCuaderno}"?\n\nEsto eliminará:\n- El cuaderno\n- Todos los textos originales\n- Todos los textos de lectura\n- Todos los fragmentos y comentarios\n- Todo el progreso de lectura\n\nEsta acción NO se puede deshacer.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      await container.useCases.deleteCuaderno.execute(cuadernoId);
+      await loadCuadernos();
+      // Navegar a la página principal si estábamos viendo el cuaderno eliminado
+      navigate('/');
+    } catch (error) {
+      console.error('Error eliminando cuaderno:', error);
+      alert('Error al eliminar el cuaderno');
+    }
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -144,10 +167,22 @@ export function Sidebar() {
 
         <ul className="cuadernos-list">
           {cuadernos.map((cuaderno) => (
-            <li key={cuaderno.cuaderno_id}>
-              <Link to={`/cuaderno/${cuaderno.cuaderno_id}`}>
+            <li key={cuaderno.cuaderno_id} className="cuaderno-item">
+              <Link
+                to={`/cuaderno/${cuaderno.cuaderno_id}`}
+                className="cuaderno-link"
+              >
                 {cuaderno.nombre}
               </Link>
+              <button
+                className="btn-delete-cuaderno"
+                onClick={(e) =>
+                  handleDeleteCuaderno(e, cuaderno.cuaderno_id, cuaderno.nombre)
+                }
+                title="Eliminar cuaderno"
+              >
+                🗑️
+              </button>
             </li>
           ))}
         </ul>

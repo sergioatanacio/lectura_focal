@@ -35,6 +35,7 @@ import { UpdateCuaderno } from '@/modules/reader/application/usecases/UpdateCuad
 import { UpdateTextoDeLectura } from '@/modules/reader/application/usecases/UpdateTextoDeLectura';
 import { GetTextoCompletoConComentarios } from '@/modules/reader/application/usecases/GetTextoCompletoConComentarios';
 import { DeleteTextoDeLectura } from '@/modules/reader/application/usecases/DeleteTextoDeLectura';
+import { DeleteCuaderno } from '@/modules/reader/application/usecases/DeleteCuaderno';
 
 export interface Container {
   dbAdapter: SqlJsDatabaseAdapter;
@@ -67,6 +68,7 @@ export interface Container {
     updateTextoDeLectura: UpdateTextoDeLectura;
     getTextoCompletoConComentarios: GetTextoCompletoConComentarios;
     deleteTextoDeLectura: DeleteTextoDeLectura;
+    deleteCuaderno: DeleteCuaderno;
   };
 }
 
@@ -170,6 +172,14 @@ export function buildContainer(dbAdapter: SqlJsDatabaseAdapter): Container {
         commentRepo
       ),
       deleteTextoDeLectura: new DeleteTextoDeLectura(
+        textoDeLecturaRepo,
+        fragmentoRepo,
+        estadoLecturaRepo,
+        dbAdapter
+      ),
+      deleteCuaderno: new DeleteCuaderno(
+        cuadernoRepo,
+        textoOriginalRepo,
         textoDeLecturaRepo,
         fragmentoRepo,
         estadoLecturaRepo,
