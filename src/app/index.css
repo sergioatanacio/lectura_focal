@@ -406,3 +406,180 @@ select:focus {
 .modal-actions button:hover {
   background-color: #0056b3;
 }
+
+/* Botón de editar inline */
+.btn-edit-inline {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  margin-left: 0.5rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.btn-edit-inline:hover {
+  opacity: 1;
+}
+
+/* Formularios de edición inline */
+.edit-name-form,
+.edit-title-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.edit-name-form input,
+.edit-title-form input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.edit-name-form button,
+.edit-title-form button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+}
+
+.edit-name-form button:hover,
+.edit-title-form button:hover {
+  background-color: #0056b3;
+}
+
+.edit-name-form button:last-child,
+.edit-title-form button:last-child {
+  background-color: #6c757d;
+}
+
+.edit-name-form button:last-child:hover,
+.edit-title-form button:last-child:hover {
+  background-color: #545b62;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.toolbar button:hover {
+  background-color: #f8f9fa;
+}
+
+/* Header de cuaderno */
+.cuaderno-header {
+  margin-bottom: 2rem;
+}
+
+.cuaderno-header h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Title section en lectura */
+.title-section {
+  margin-bottom: 0.5rem;
+}
+
+/* Modal de texto completo */
+.full-text-modal {
+  max-width: 800px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.modal-header button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.modal-header button:hover {
+  color: #333;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.full-text-preview {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid #ddd;
+}
+
+.modal-footer button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+}
+
+.modal-footer button:hover {
+  background-color: #0056b3;
+}

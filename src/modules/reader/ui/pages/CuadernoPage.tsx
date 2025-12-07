@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useContainer } from '@/app/context/ContainerContext';
+import type { Cuaderno } from '../../domain/entities/Cuaderno';
 import type { TextoLecturaListItem } from '../../application/usecases/ListTextosDeLectura';
 
 export function CuadernoPage() {
   const { cuadernoId } = useParams<{ cuadernoId: string }>();
   const container = useContainer();
   const navigate = useNavigate();
+  const [cuaderno, setCuaderno] = useState<Cuaderno | null>(null);
   const [textosDeLectura, setTextosDeLectura] = useState<
     TextoLecturaListItem[]
   >([]);
@@ -15,12 +17,24 @@ export function CuadernoPage() {
   const [selectedMode, setSelectedMode] = useState<'ORACION' | 'PARRAFO'>(
     'ORACION'
   );
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
 
   useEffect(() => {
     if (cuadernoId) {
+      loadCuaderno();
       loadTextosDeLectura();
     }
   }, [cuadernoId]);
+
+  const loadCuaderno = async () => {
+    if (!cuadernoId) return;
+    const cuadernosList = await container.useCases.listCuadernos.execute();
+    const found = cuadernosList.find((c) => c.cuaderno_id === cuadernoId);
+    if (found) {
+      setCuaderno(found);
+    }
+  };
 
   const loadTextosDeLectura = async () => {
     if (!cuadernoId) return;
@@ -59,9 +73,55 @@ export function CuadernoPage() {
     }
   };
 
+  const handleEditName = () => {
+    if (cuaderno) {
+      setEditedName(cuaderno.nombre);
+      setIsEditingName(true);
+    }
+  };
+
+  const handleSaveName = async () => {
+    if (!cuadernoId || !editedName.trim()) return;
+
+    try {
+      await container.useCases.updateCuaderno.execute({
+        cuadernoId,
+        nombre: editedName.trim(),
+      });
+      await loadCuaderno();
+      setIsEditingName(false);
+    } catch (error) {
+      console.error('Error actualizando nombre:', error);
+    }
+  };
+
   return (
     <div className="cuaderno-page">
-      <h2>Cuaderno</h2>
+      <div className="cuaderno-header">
+        {isEditingName ? (
+          <div className="edit-name-form">
+            <input
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveName();
+                if (e.key === 'Escape') setIsEditingName(false);
+              }}
+              autoFocus
+            />
+            <button onClick={handleSaveName}>Guardar</button>
+            <button onClick={() => setIsEditingName(false)}>Cancelar</button>
+          </div>
+        ) : (
+          <h2>
+            {cuaderno?.nombre || 'Cuaderno'}
+            <button className="btn-edit-inline" onClick={handleEditName}>
+              ✏️
+            </button>
+          </h2>
+        )}
+      </div>
 
       <div className="new-texto-section">
         {isCreating ? (

@@ -31,6 +31,9 @@ import { PrevFragmento } from '@/modules/reader/application/usecases/PrevFragmen
 import { UpdateFragmento } from '@/modules/reader/application/usecases/UpdateFragmento';
 import { DeleteFragmento } from '@/modules/reader/application/usecases/DeleteFragmento';
 import { SetFocusModeV2 } from '@/modules/reader/application/usecases/SetFocusModeV2';
+import { UpdateCuaderno } from '@/modules/reader/application/usecases/UpdateCuaderno';
+import { UpdateTextoDeLectura } from '@/modules/reader/application/usecases/UpdateTextoDeLectura';
+import { GetTextoCompletoConComentarios } from '@/modules/reader/application/usecases/GetTextoCompletoConComentarios';
 
 export interface Container {
   dbAdapter: SqlJsDatabaseAdapter;
@@ -59,6 +62,9 @@ export interface Container {
     updateFragmento: UpdateFragmento;
     deleteFragmento: DeleteFragmento;
     setFocusModeV2: SetFocusModeV2;
+    updateCuaderno: UpdateCuaderno;
+    updateTextoDeLectura: UpdateTextoDeLectura;
+    getTextoCompletoConComentarios: GetTextoCompletoConComentarios;
   };
 }
 
@@ -154,6 +160,13 @@ export function buildContainer(dbAdapter: SqlJsDatabaseAdapter): Container {
       updateFragmento: new UpdateFragmento(fragmentoRepo, dbAdapter),
       deleteFragmento: new DeleteFragmento(fragmentoRepo, getFragmentoView, dbAdapter),
       setFocusModeV2: new SetFocusModeV2(estadoLecturaRepo, getFragmentoView, dbAdapter),
+      updateCuaderno: new UpdateCuaderno(cuadernoRepo, dbAdapter),
+      updateTextoDeLectura: new UpdateTextoDeLectura(textoDeLecturaRepo, dbAdapter),
+      getTextoCompletoConComentarios: new GetTextoCompletoConComentarios(
+        textoDeLecturaRepo,
+        fragmentoRepo,
+        commentRepo
+      ),
     },
   };
 }

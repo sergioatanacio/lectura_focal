@@ -14,6 +14,10 @@ export function LecturaPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState('');
   const [showCommentModal, setShowCommentModal] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [showFullText, setShowFullText] = useState(false);
+  const [fullText, setFullText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -123,6 +127,102 @@ export function LecturaPage() {
     await loadView();
   };
 
+  const handleEditTitle = () => {
+    if (view) {
+      setEditedTitle(view.nombre_lectura || '');
+      setIsEditingTitle(true);
+    }
+  };
+
+  const handleSaveTitle = async () => {
+    if (!textoLecturaId) return;
+
+    try {
+      await container.useCases.updateTextoDeLectura.execute({
+        textoLecturaId,
+        nombre: editedTitle.trim() || undefined,
+      });
+      await loadView();
+      setIsEditingTitle(false);
+    } catch (error) {
+      console.error('Error actualizando título:', error);
+    }
+  };
+
+  const handleExportText = async () => {
+    if (!textoLecturaId) return;
+
+    try {
+      const markdown =
+        await container.useCases.getTextoCompletoConComentarios.exportAsMarkdown(
+          textoLecturaId
+        );
+
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${view?.nombre_lectura || 'texto'}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exportando texto:', error);
+    }
+  };
+
+  const handleViewFullText = async () => {
+    if (!textoLecturaId) return;
+
+    try {
+      const markdown =
+        await container.useCases.getTextoCompletoConComentarios.exportAsMarkdown(
+          textoLecturaId
+        );
+      setFullText(markdown);
+      setShowFullText(true);
+    } catch (error) {
+      console.error('Error obteniendo texto completo:', error);
+    }
+  };
+
+  const handleDownloadDB = async () => {
+    try {
+      const data = await container.dbAdapter.exportBytes();
+      const blob = new Blob([data], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lectura-oracion-${Date.now()}.db`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error descargando BD:', error);
+      alert('Error al descargar la base de datos');
+    }
+  };
+
+  const handleUploadDB = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.db';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        await container.dbAdapter.importBytes(uint8Array);
+        alert('Base de datos cargada exitosamente. Recargando página...');
+        window.location.reload();
+      } catch (error) {
+        console.error('Error cargando BD:', error);
+        alert('Error al cargar la base de datos');
+      }
+    };
+    input.click();
+  };
+
   useKeyboardNavigation({
     onNext: view?.has_next ? handleNext : undefined,
     onPrev: view?.has_prev ? handlePrev : undefined,
@@ -151,16 +251,64 @@ export function LecturaPage() {
   return (
     <div className={`lectura-page ${focus_mode ? 'focus-mode' : ''}`}>
       {!focus_mode && (
-        <header className="lectura-header">
-          <h2>{view.nombre_lectura || view.nombre_cuaderno}</h2>
-          <div className="metadata">
-            <span>Modo: {view.modo_segmentacion}</span>
-            <span>
-              Fragmento {current_fragmento.position + 1} de{' '}
-              {current_fragmento.total_fragmentos}
-            </span>
+        <>
+          <header className="lectura-header">
+            <div className="title-section">
+              {isEditingTitle ? (
+                <div className="edit-title-form">
+                  <input
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') setIsEditingTitle(false);
+                    }}
+                    placeholder="Título del texto (opcional)"
+                    autoFocus
+                  />
+                  <button onClick={handleSaveTitle}>Guardar</button>
+                  <button onClick={() => setIsEditingTitle(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <h2>
+                  {view.nombre_lectura || view.nombre_cuaderno}
+                  <button
+                    className="btn-edit-inline"
+                    onClick={handleEditTitle}
+                    title="Editar título"
+                  >
+                    ✏️
+                  </button>
+                </h2>
+              )}
+            </div>
+            <div className="metadata">
+              <span>Modo: {view.modo_segmentacion}</span>
+              <span>
+                Fragmento {current_fragmento.position + 1} de{' '}
+                {current_fragmento.total_fragmentos}
+              </span>
+            </div>
+          </header>
+
+          <div className="toolbar">
+            <button onClick={handleViewFullText} title="Ver texto completo">
+              📄 Ver Texto Completo
+            </button>
+            <button onClick={handleExportText} title="Exportar como Markdown">
+              💾 Exportar Texto
+            </button>
+            <button onClick={handleDownloadDB} title="Descargar base de datos">
+              ⬇️ Descargar BD
+            </button>
+            <button onClick={handleUploadDB} title="Cargar base de datos">
+              ⬆️ Cargar BD
+            </button>
           </div>
-        </header>
+        </>
       )}
 
       <div className="fragmento-container">
@@ -217,6 +365,27 @@ export function LecturaPage() {
           onSave={handleSaveComment}
           onCancel={() => setShowCommentModal(false)}
         />
+      )}
+
+      {showFullText && (
+        <div className="modal-overlay" onClick={() => setShowFullText(false)}>
+          <div
+            className="modal-content full-text-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3>Texto Completo</h3>
+              <button onClick={() => setShowFullText(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <pre className="full-text-preview">{fullText}</pre>
+            </div>
+            <div className="modal-footer">
+              <button onClick={handleExportText}>Exportar como .md</button>
+              <button onClick={() => setShowFullText(false)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
