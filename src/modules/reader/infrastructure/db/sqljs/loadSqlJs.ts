@@ -20,8 +20,10 @@ export async function getSqlJs(): Promise<SqlJsStatic> {
       throw new Error('No se pudo cargar initSqlJs');
     }
 
+    // Usar BASE_URL para compatibilidad con subdirectorios y file://
+    const baseUrl = import.meta.env.BASE_URL || '/';
     sqlJsInstance = await initSqlJs({
-      locateFile: (file) => `/${file}`,
+      locateFile: (file) => `${baseUrl}${file}`,
     });
   }
   return sqlJsInstance;
