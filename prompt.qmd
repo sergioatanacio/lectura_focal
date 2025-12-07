@@ -1,0 +1,810 @@
+
+---
+title: "Especificación del Sistema — Lector y Editor Unidad-por-Unidad (Frontend)"
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 3
+---
+
+# Glosario de términos {#sec-glosario}
+
+> Nota: Cada término del glosario se usa como referencia cruzada en la especificación del sistema (ver @sec-sistema). Mantener este glosario actualizado evita ambigüedades.
+
+## Arquitectura y capas
+
+### Arquitectura hexagonal (Ports & Adapters) {#sec-term-hexagonal}
+Estilo arquitectónico que organiza el sistema alrededor de un núcleo de lógica pura (dominio + aplicación) aislado de detalles tecnológicos. La comunicación con el exterior se realiza mediante **puertos** (interfaces) y **adaptadores** (implementaciones). Ver @sec-arquitectura.
+
+### Hexágono puro {#sec-term-hexagono-puro}
+Conjunto de código **agnóstico de librerías** y dependencias externas (por ejemplo, React, sql.js, IndexedDB). En este sistema, los hexágonos puros viven en los módulos, dentro de *domain* y *application*. Ver @sec-arquitectura.
+
+### Dominio (Domain) {#sec-term-dominio}
+Capa donde residen las reglas del negocio, invariantes, entidades y value objects. No conoce UI ni persistencia. Ver @sec-modelo-dominio.
+
+### Aplicación (Application) {#sec-term-aplicacion}
+Capa que orquesta el dominio mediante **casos de uso** y define **puertos** para acceder a recursos externos (persistencia, etc.). Ver @sec-casos-uso.
+
+### Infraestructura (Infrastructure) {#sec-term-infraestructura}
+Capa que implementa los puertos mediante adaptadores concretos (por ejemplo, repositorios sobre sql.js/IndexedDB) y contiene el *bootstrap* y composición (DI). Ver @sec-persistencia y @sec-bootstrap.
+
+### UI (Interfaz de usuario) {#sec-term-ui}
+Componentes React, páginas y hooks de presentación. Consume la aplicación (casos de uso/fachada). No accede a la DB directamente. Ver @sec-ux.
+
+### Puerto (Port) {#sec-term-puerto}
+Interfaz definida en la capa de aplicación que abstrae una dependencia externa (por ejemplo, repositorios). La infraestructura provee implementaciones. Ver @sec-puertos.
+
+### Adaptador (Adapter) {#sec-term-adaptador}
+Implementación concreta de un puerto; traduce llamadas de la aplicación a una tecnología específica (sql.js, IndexedDB). Ver @sec-adaptadores.
+
+### Composición / Inyección de dependencias (DI) {#sec-term-di}
+Proceso de construir objetos y conectar implementaciones concretas (adaptadores) con interfaces (puertos) y casos de uso. Se realiza en el *bootstrap*. Ver @sec-bootstrap.
+
+## Modelo y comportamiento
+
+### Caso de uso (Use Case) {#sec-term-caso-uso}
+Unidad de interacción del sistema que expresa una intención del usuario (p. ej., “Siguiente unidad”, “Editar unidad”). Vive en la capa de aplicación. Ver @sec-casos-uso.
+
+### Entidad (Entity) {#sec-term-entidad}
+Objeto con identidad estable (ID) y ciclo de vida propio. Ej.: Documento, Unidad, Comentario. Ver @sec-modelo-dominio.
+
+### Value Object {#sec-term-vo}
+Objeto sin identidad propia que se compara por valor; modela conceptos como `SegmentationMode`. Ver @sec-modelo-dominio.
+
+### Invariante {#sec-term-invariante}
+Regla que siempre debe cumplirse en el dominio (p. ej., “una Unidad pertenece a un Documento”). Ver @sec-modelo-dominio.
+
+### DTO (Data Transfer Object) {#sec-term-dto}
+Estructura simple para transportar datos hacia/desde la UI sin exponer estructuras internas del dominio. Ver @sec-contratos.
+
+## Texto y lectura
+
+### Documento {#sec-term-documento}
+Contenido original pegado por el usuario, almacenado como texto inmutable, más metadatos (título). Ver @sec-entity-documento.
+
+### Texto original inmutable {#sec-term-original-inmutable}
+El texto pegado se conserva íntegro y no se reescribe. Las ediciones operan sobre unidades segmentadas. Ver @sec-reglas-texto.
+
+### Segmentación {#sec-term-segmentacion}
+Proceso de dividir el texto original en unidades (oraciones o párrafos). Se ejecuta al guardar o iniciar lectura. Ver @sec-segmentacion.
+
+### Modo de segmentación {#sec-term-segmentation-mode}
+Value Object con dos valores: `ORACION` (default) y `PARRAFO`. Ver @sec-segmentacion.
+
+### Unidad (Unit) {#sec-term-unidad}
+Elemento navegable mostrado en la lectura: una oración o un párrafo. Puede editarse/eliminarse y tener comentarios. Ver @sec-entity-unidad.
+
+### Oración {#sec-term-oracion}
+Unidad segmentada por heurística simple considerando `. ? !` y excepciones básicas (abreviaturas). Ver @sec-segmentacion.
+
+### Párrafo {#sec-term-parrafo}
+Unidad segmentada separando bloques por líneas en blanco (doble salto de línea). Ver @sec-segmentacion.
+
+### Sesión/estado de lectura {#sec-term-reading-state}
+Persistencia del progreso: documento actual, índice o posición de unidad, modo (oración/párrafo) y si el modo enfoque está activo. Ver @sec-entity-reading-state.
+
+### Modo enfoque {#sec-term-modo-enfoque}
+Estado UI que minimiza controles y oculta paneles secundarios para mejorar concentración, manteniendo navegación por teclado. Ver @sec-ux-lectura.
+
+### Comentario {#sec-term-comentario}
+Anotación asociada a una Unidad. Puede listarse y añadirse; se persiste localmente. Ver @sec-entity-comentario.
+
+## Persistencia local y offline
+
+### Offline-first {#sec-term-offline-first}
+La app funciona sin internet; todos los datos se guardan localmente. Ver @sec-nfr-offline.
+
+### SQLite (en navegador) {#sec-term-sqlite}
+Motor SQL embebido; aquí se ejecuta mediante sql.js. Ver @sec-persistencia.
+
+### sql.js {#sec-term-sqljs}
+Compilación de SQLite a WebAssembly/JS; permite ejecutar SQLite en el navegador. Ver @sec-persistencia.
+
+### IndexedDB {#sec-term-indexeddb}
+Almacén clave-valor del navegador usado para persistir el archivo SQLite (byte array). Ver @sec-persistencia.
+
+### Migración básica {#sec-term-migracion}
+Evolución mínima del esquema (versionado simple). Se aplica en el *bootstrap* usando una tabla de versión. Ver @sec-migraciones.
+
+### Bootstrap de base de datos {#sec-term-bootstrap-db}
+Secuencia de arranque: abrir IndexedDB, cargar/crear SQLite, aplicar migraciones. Ver @sec-bootstrap.
+
+### Import/Export {#sec-term-import-export}
+Capacidad de exportar DB `.sqlite` o documento `.json`, e importar desde ambos. Ver @sec-import-export.
+
+## Accesibilidad
+
+### Accesibilidad (A11y) {#sec-term-a11y}
+Requisitos para que la app sea usable con teclado, lectores de pantalla y foco controlado. Ver @sec-a11y.
+
+### ARIA {#sec-term-aria}
+Atributos para enriquecer semántica de componentes custom (modales, botones, regiones). Ver @sec-a11y.
+
+### Gestión de foco {#sec-term-foco}
+Control explícito del elemento enfocado (especialmente en modales y navegación por teclado). Ver @sec-a11y-teclado.
+
+
+
+# Especificación del sistema {#sec-sistema}
+
+## 1. Alcance y objetivos {#sec-alcance}
+
+El sistema es una aplicación 100% frontend (React + TypeScript) y **offline-first** (@sec-term-offline-first). Permite:
+
+1. Capturar un @sec-term-documento pegando texto en la UI.
+2. Conservar el @sec-term-original-inmutable.
+3. Ejecutar @sec-term-segmentacion para generar @sec-term-unidad por @sec-term-oracion o @sec-term-parrafo.
+4. Proveer una experiencia de lectura “unidad por unidad” con navegación por teclado y modo @sec-term-modo-enfoque.
+5. Permitir edición/eliminación de unidades y agregar @sec-term-comentario por unidad.
+6. Persistir todo localmente con @sec-term-sqlite + @sec-term-sqljs almacenado en @sec-term-indexeddb.
+7. Soportar @sec-term-import-export para respaldo y portabilidad.
+
+Fuera de alcance:
+- Sin backend, sin autenticación multiusuario, sin sincronización en nube.
+- Sin segmentación lingüística avanzada (solo heurística básica; ver @sec-segmentacion).
+
+
+## 2. UX / Pantallas y estados (GUI) {#sec-ux}
+
+La UI (@sec-term-ui) se define como dos pantallas principales y modales transversales. Debe ser usable 100% por teclado y accesible (@sec-term-a11y).
+
+### 2.1 Estados globales {#sec-ux-global}
+
+#### G1. Arranque (bootstrap DB) {#sec-ux-arranque}
+
+```ascii
++--------------------------------------------------------------+
+| App Reader                                                   |
++--------------------------------------------------------------+
+| Inicializando base de datos local...                          |
+| - Abriendo IndexedDB                                          |
+| - Cargando sql.js                                             |
+| - Aplicando migraciones (básicas)                             |
+|                                                              |
+| [##########...............]                                   |
++--------------------------------------------------------------+
+````
+
+Relación: este estado corresponde al @sec-term-bootstrap-db descrito en @sec-bootstrap.
+
+#### G2. Error global (DB no disponible) {#sec-ux-error-global}
+
+```ascii
++--------------------------------------------------------------+
+| App Reader                                  [Reintentar]     |
++--------------------------------------------------------------+
+| ERROR: No se pudo abrir la base de datos local.              |
+|                                                              |
+| Acciones:                                                    |
+|  - [Reintentar]                                              |
+|  - [Exportar diagnóstico] (opcional)                         |
+|  - [Reset local (borra datos)]                               |
++--------------------------------------------------------------+
+```
+
+Regla: si el almacenamiento está bloqueado o la DB está corrupta, la UI no debe continuar a Pantalla A/B.
+
+### 2.2 Pantalla A — Documento (Ingreso) {#sec-ux-documento}
+
+Responsabilidad: capturar/editar el texto fuente del @sec-term-documento, seleccionar @sec-term-segmentation-mode, y disparar Guardar/Leer.
+
+#### A0. Vacío {#sec-ux-a0}
+
+```ascii
++--------------------------------------------------------------+
+| Documento                                                    |
+|                                   [Importar] [Exportar]      |
++--------------------------------------------------------------+
+| Título (opcional): [______________________________]          |
+|                                                              |
+| Pegue aquí el texto completo                                 |
+| +----------------------------------------------------------+ |
+| |                                                          | |
+| |                                                          | |
+| |                                                          | |
+| |                                                          | |
+| +----------------------------------------------------------+ |
+|                                                              |
+| Segmentación: (•) Oración   ( ) Párrafo                      |
+|                                                              |
+| [Guardar]   [Leer]                                           |
++--------------------------------------------------------------+
+| Atajos: Ctrl+Enter = Leer | Ctrl+S = Guardar                 |
++--------------------------------------------------------------+
+```
+
+#### A1. Texto sin guardar (dirty) {#sec-ux-a1}
+
+```ascii
++--------------------------------------------------------------+
+| Documento                                      Estado: *     |
++--------------------------------------------------------------+
+| Título: [Mi lectura 01_________________________]             |
+| +----------------------------------------------------------+ |
+| | Texto pegado...                                           | |
+| +----------------------------------------------------------+ |
+| Segmentación: (•) Oración   ( ) Párrafo                      |
+| [Guardar]   [Leer]                                           |
++--------------------------------------------------------------+
+| * Cambios sin guardar                                        |
++--------------------------------------------------------------+
+```
+
+#### A2. Guardado OK {#sec-ux-a2}
+
+```ascii
++--------------------------------------------------------------+
+| Documento                                      Estado: OK    |
++--------------------------------------------------------------+
+| Título: [Mi lectura 01_________________________]             |
+| +----------------------------------------------------------+ |
+| | Texto original guardado (inmutable)                       | |
+| +----------------------------------------------------------+ |
+| Segmentación: (•) Oración   ( ) Párrafo                      |
+| [Guardar]   [Leer]                                           |
++--------------------------------------------------------------+
+| Último guardado: (timestamp local)                           |
++--------------------------------------------------------------+
+```
+
+#### A3. Validación (leer sin texto) {#sec-ux-a3}
+
+```ascii
++--------------------------------------------------------------+
+| Documento                                                    |
++--------------------------------------------------------------+
+| ERROR: Debe ingresar texto antes de iniciar lectura.         |
+| [OK]                                                        |
++--------------------------------------------------------------+
+```
+
+#### A4. Modal Import/Export {#sec-ux-a4}
+
+```ascii
++--------------------------- MODAL ----------------------------+
+| Importar / Exportar                                         X|
++--------------------------------------------------------------+
+| ( ) Importar DB (.sqlite)                                    |
+| ( ) Importar Documento (JSON)                                |
+| ( ) Exportar DB (.sqlite)                                    |
+| ( ) Exportar Documento (JSON)                                |
+| Archivo: [________________________] [Seleccionar...]         |
+| [Cancelar]                                      [Continuar]  |
++--------------------------------------------------------------+
+```
+
+Vinculación: @sec-term-import-export especifica los flujos y formatos (ver @sec-import-export).
+
+### 2.3 Pantalla B — Lectura (Enfoque) {#sec-ux-lectura}
+
+Responsabilidad: mostrar una @sec-term-unidad, navegar, editar/eliminar, gestionar @sec-term-comentario, persistir @sec-term-reading-state.
+
+#### B0. Lectura estándar {#sec-ux-b0}
+
+```ascii
++--------------------------------------------------------------+
+| Lectura: Mi lectura 01                         12 / 240      |
+| [Salir]                                        Modo: ORACIÓN |
++--------------------------------------------------------------+
+|                                                              |
+|  "Esta es la oración actual que se muestra en pantalla."     |
+|                                                              |
++--------------------------------------------------------------+
+| [<< Anterior]   [Editar] [Eliminar]   [Siguiente >>]         |
++--------------------------------------------------------------+
+| Comentarios (2)                                              |
+| - "Revisar esta idea."                                       |
+| - "Cambiar tono a más formal."                               |
+| Añadir comentario: [______________________________] [Añadir] |
++--------------------------------------------------------------+
+| Atajos: Enter=Siguiente | ←/→ | E=Editar | Del=Eliminar      |
++--------------------------------------------------------------+
+```
+
+#### B1. Modo enfoque ON {#sec-ux-b1}
+
+```ascii
++--------------------------------------------------------------+
+| Lectura: Mi lectura 01                         12 / 240      |
+| [Salir]                                     Enfoque: ON      |
++--------------------------------------------------------------+
+|                                                              |
+|        "Esta es la oración actual. Sin distracciones."       |
+|                                                              |
++--------------------------------------------------------------+
+|              (Enter / →) Siguiente     (←) Anterior          |
++--------------------------------------------------------------+
+```
+
+Definición: @sec-term-modo-enfoque.
+
+#### B2. Modo párrafo {#sec-ux-b2}
+
+```ascii
++--------------------------------------------------------------+
+| Lectura: Mi lectura 01                          3 / 40       |
+| [Salir]                                       Modo: PÁRRAFO  |
++--------------------------------------------------------------+
+| "Este es el párrafo actual, puede contener varias frases.    |
+|  Se muestra completo en una sola unidad."                    |
++--------------------------------------------------------------+
+| [<< Anterior]   [Editar] [Eliminar]   [Siguiente >>]         |
+| Comentarios (0)                                              |
+| Añadir comentario: [______________________________] [Añadir] |
++--------------------------------------------------------------+
+```
+
+#### B3. Fin del documento {#sec-ux-b3}
+
+```ascii
++--------------------------------------------------------------+
+| Lectura: Mi lectura 01                         240 / 240     |
+| [Salir]                                        Modo: ORACIÓN |
++--------------------------------------------------------------+
+| "Última oración del documento."                              |
++--------------------------------------------------------------+
+| [<< Anterior]   [Editar] [Eliminar]   [Siguiente >>] (off)   |
++--------------------------------------------------------------+
+| Estado: Fin del documento                                    |
+| [Volver al inicio]  [Salir]                                  |
++--------------------------------------------------------------+
+```
+
+#### B4. Sin unidades {#sec-ux-b4}
+
+```ascii
++--------------------------------------------------------------+
+| Lectura: Mi lectura 01                           0 / 0       |
+| [Salir]                                                      |
++--------------------------------------------------------------+
+| No hay unidades para mostrar.                                |
+| [Volver]                                                     |
++--------------------------------------------------------------+
+```
+
+Causa típica: texto vacío o segmentación que no produjo unidades (ver @sec-segmentacion).
+
+### 2.4 Subestados (modales) {#sec-ux-modales}
+
+#### C1. Editar unidad {#sec-ux-c1}
+
+```ascii
++--------------------------- MODAL ----------------------------+
+| Editar unidad                                            X  |
++--------------------------------------------------------------+
+| Original (solo referencia):                                  |
+| "Esta es la oración original (inmutable)."                   |
+| Editado:                                                     |
+| +----------------------------------------------------------+ |
+| | Esta es la oración editada que reemplaza la unidad actual.| |
+| +----------------------------------------------------------+ |
+| [Cancelar]                                  [Guardar cambios] |
++--------------------------------------------------------------+
+```
+
+Relación: preserva @sec-term-original-inmutable; solo cambia @sec-term-unidad (ver @sec-reglas-texto).
+
+#### C2. Confirmación eliminación {#sec-ux-c2}
+
+```ascii
++--------------------------- MODAL ----------------------------+
+| Eliminar unidad                                           X  |
++--------------------------------------------------------------+
+| ¿Seguro que desea eliminar esta unidad?                       |
+| "Esta es la oración actual..."                               |
+| [Cancelar]                                       [Eliminar]  |
++--------------------------------------------------------------+
+```
+
+#### C3. Comentario inválido {#sec-ux-c3}
+
+```ascii
++--------------------------------------------------------------+
+| Comentarios                                                  |
++--------------------------------------------------------------+
+| ERROR: El comentario no puede estar vacío.                   |
++--------------------------------------------------------------+
+```
+
+### 2.5 Flujo de navegación {#sec-ux-flow}
+
+```ascii
+[Arranque/G1] -> [Documento/A] --(Leer)--> [Lectura/B]
+                      ^                         |
+                      |---------(Salir)---------|
+```
+
+## 3. Reglas del texto y segmentación {#sec-reglas-texto}
+
+### 3.1 Preservación del texto original {#sec-reglas-original}
+
+* El @sec-term-documento almacena el @sec-term-original-inmutable como `raw_text`.
+* Las operaciones de “Editar unidad” (@sec-ux-c1) y “Eliminar unidad” (@sec-ux-c2) **no reescriben** `raw_text`.
+* La UI puede mostrar `raw_text` en lectura solo como “Original (referencia)” (ver @sec-ux-c1).
+
+### 3.2 Segmentación (heurística simple) {#sec-segmentacion}
+
+Requisito: mantenerlo “lo más sencillo” y suficiente para uso típico (sin promesas de alta lingüística).
+
+* Modo @sec-term-parrafo:
+
+  * separar por bloques de texto usando líneas en blanco (doble salto `\n\n` o múltiples).
+* Modo @sec-term-oracion:
+
+  * separar por `.`, `?`, `!` cuando van seguidos de espacio o fin de texto.
+  * excepciones mínimas (no cortar si termina en abreviaturas comunes): `Dr.`, `Sr.`, `Sra.`, `etc.`, `p.ej.`
+  * normalizar espacios y evitar unidades vacías.
+
+Regla de consistencia: si una @sec-term-unidad se edita, **no** se re-segmenta el documento completo; se modifica solo esa unidad. Ver @sec-term-original-inmutable.
+
+## 4. Modelo de dominio (entidades y relaciones) {#sec-modelo-dominio}
+
+### 4.1 Entidad: Documento {#sec-entity-documento}
+
+Atributos sugeridos:
+
+* `document_id: string` (ID)
+* `title?: string`
+* `raw_text: string` (texto original inmutable; ver @sec-term-original-inmutable)
+* `created_at`, `updated_at`
+
+Relaciones:
+
+* Un documento tiene muchas unidades (@sec-entity-unidad).
+* Un documento tiene un estado de lectura (@sec-entity-reading-state).
+
+### 4.2 Entidad: Unidad {#sec-entity-unidad}
+
+Atributos sugeridos:
+
+* `unit_id: string`
+* `document_id: string`
+* `position: number` (orden estable)
+* `mode: "ORACION" | "PARRAFO"` (@sec-term-segmentation-mode)
+* `original_text: string` (snapshot de la segmentación inicial para referencia)
+* `current_text: string` (editable)
+* `is_deleted: boolean`
+
+Relaciones:
+
+* Una unidad tiene muchos comentarios (@sec-entity-comentario).
+
+### 4.3 Entidad: Comentario {#sec-entity-comentario}
+
+Atributos sugeridos:
+
+* `comment_id: string`
+* `unit_id: string`
+* `text: string`
+* `created_at: number`
+
+### 4.4 Entidad: Estado de lectura {#sec-entity-reading-state}
+
+Atributos sugeridos:
+
+* `document_id: string`
+* `mode: "ORACION" | "PARRAFO"`
+* `current_position: number`
+* `focus_mode: boolean`
+
+Motivo: la UI necesita persistir el progreso para retomar lectura (ver @sec-ux-b0 y @sec-ux-b1).
+
+### 4.5 Invariantes principales {#sec-invariantes}
+
+* Una Unidad siempre pertenece a un Documento (FK lógica).
+* Un Comentario siempre pertenece a una Unidad.
+* `position` es único por documento y modo (para navegación estable).
+* No existe `current_position` fuera del rango de unidades no eliminadas (o se corrige al cargar).
+
+## 5. Casos de uso (capa de aplicación) {#sec-casos-uso}
+
+> Los casos de uso (@sec-term-caso-uso) forman el contrato de interacción entre UI (@sec-term-ui) y núcleo. La UI no toca persistencia: delega todo a estos casos.
+
+### 5.1 Captura/gestión de documento
+
+* `CreateDocumentFromText(title?, rawText, segmentationMode)`
+
+  * Pre: `rawText` no vacío (si vacío => error usado por @sec-ux-a3).
+  * Post: documento creado, unidades generadas (ver @sec-segmentacion), estado lectura inicial.
+* `UpdateDocumentText(documentId, rawText)` (opcional si editas texto en Pantalla A)
+
+  * Nota: si se actualiza `raw_text`, se recomienda regenerar unidades con confirmación explícita (para mantener simple, se puede omitir en primera versión).
+
+### 5.2 Lectura y navegación
+
+* `StartReading(documentId, mode)`
+
+  * Post: establece modo actual y retorna unidad actual.
+* `GetCurrentUnit(documentId)`
+* `NextUnit(documentId)`
+* `PrevUnit(documentId)`
+* `SetReadingMode(documentId, mode)`
+
+  * Nota: al cambiar modo, se navega dentro de unidades de ese modo (oración/párrafo).
+
+### 5.3 Edición/eliminación de unidades
+
+* `UpdateUnitText(unitId, newText)`
+
+  * Post: actualiza `current_text`.
+* `DeleteUnit(unitId)`
+
+  * Post: marca `is_deleted=true` y ajusta `current_position` si fuese necesario.
+
+### 5.4 Comentarios por unidad
+
+* `AddComment(unitId, text)`
+
+  * Pre: `text` no vacío (si vacío => error usado por @sec-ux-c3).
+* `ListComments(unitId)`
+
+### 5.5 Modo enfoque
+
+* `SetFocusMode(documentId, isEnabled)`
+
+  * Post: persiste `focus_mode` para que la UI retome (ver @sec-ux-b1).
+
+## 6. Arquitectura hexagonal y modularidad {#sec-arquitectura}
+
+### 6.1 Principio de dependencia {#sec-dependencias}
+
+* @sec-term-dominio no depende de nadie.
+* @sec-term-aplicacion depende de @sec-term-dominio.
+* @sec-term-infraestructura depende de @sec-term-aplicacion (para implementar @sec-term-puerto) y de tecnologías (sql.js/IndexedDB).
+* @sec-term-ui depende de @sec-term-aplicacion (casos de uso/fachada) y del router.
+
+### 6.2 Puertos (interfaces en aplicación) {#sec-puertos}
+
+Mínimos esperados (ver @sec-term-puerto):
+
+* `DocumentRepositoryPort`
+* `UnitRepositoryPort`
+* `CommentRepositoryPort`
+* `ReadingStatePort`
+
+### 6.3 Adaptadores (infraestructura) {#sec-adaptadores}
+
+Implementaciones concretas (ver @sec-term-adaptador):
+
+* `SqlJsDatabaseAdapter` (cargar/guardar bytes SQLite en IndexedDB)
+* `DocumentRepositorySqliteAdapter`
+* `UnitRepositorySqliteAdapter`
+* `CommentRepositorySqliteAdapter`
+* `ReadingStateSqliteAdapter`
+
+### 6.4 Modularidad (sin “segundo paquete ambiguo”) {#sec-modularidad}
+
+La modularidad se logra por módulos/bounded contexts (no por un “paquete” indefinido). Se proponen dos opciones:
+
+**Opción 1 (simple, recomendada para iniciar):**
+
+* `modules/reader` como único módulo de negocio.
+* `shared` para utilidades puras y contratos transversales.
+
+**Opción 2 (escalable):**
+
+* `modules/reader` (lectura)
+* `modules/library` (gestión de múltiples documentos, búsquedas)
+* `modules/settings` (preferencias)
+* `shared` como kernel común
+
+En esta fase se implementa `reader`; la estructura permite añadir otros módulos sin romper el núcleo (ver @sec-term-hexagonal).
+
+## 7. Estructura propuesta de carpetas (frontend) {#sec-estructura}
+
+Ejemplo sugerido:
+
+```text
+src/
+  app/
+    bootstrap/
+      buildContainer.ts        # DI y composición (ver @sec-term-di)
+      initDatabase.ts          # bootstrap DB (ver @sec-bootstrap)
+    routing/
+      routes.tsx
+    main.tsx
+    index.css
+
+  modules/
+    reader/
+      domain/
+        entities/
+          Document.ts
+          Unit.ts
+          Comment.ts
+          ReadingState.ts
+        values/
+          SegmentationMode.ts
+      application/
+        ports/
+          DocumentRepositoryPort.ts
+          UnitRepositoryPort.ts
+          CommentRepositoryPort.ts
+          ReadingStatePort.ts
+        usecases/
+          CreateDocumentFromText.ts
+          StartReading.ts
+          GetCurrentUnit.ts
+          NextUnit.ts
+          PrevUnit.ts
+          UpdateUnitText.ts
+          DeleteUnit.ts
+          AddComment.ts
+          ListComments.ts
+          SetReadingMode.ts
+          SetFocusMode.ts
+        dto/
+          ReaderViewDTO.ts
+      infrastructure/
+        db/
+          sqljs/
+            loadSqlJs.ts
+            SqlJsDatabaseAdapter.ts
+          indexeddb/
+            IndexedDbStore.ts
+        repositories/
+          DocumentRepositorySqliteAdapter.ts
+          UnitRepositorySqliteAdapter.ts
+          CommentRepositorySqliteAdapter.ts
+          ReadingStateSqliteAdapter.ts
+        migrations/
+          001_init.sql
+          002_indexes.sql
+      ui/
+        pages/
+          DocumentPage.tsx
+          ReadingPage.tsx
+        components/
+          TextAreaCard.tsx
+          ReadingUnit.tsx
+          CommentsPanel.tsx
+          EditUnitModal.tsx
+          ConfirmDeleteModal.tsx
+          ImportExportModal.tsx
+        hooks/
+          useKeyboardNavigation.ts
+          useFocusTrap.ts
+
+  shared/
+    domain/
+      ids.ts
+    application/
+      errors.ts
+```
+
+Nota: `ui` se mantiene dentro del módulo `reader` para coherencia con la modularidad; si crece, sigue siendo parte del módulo, no una capa separada global.
+
+## 8. Persistencia local (básica) con sql.js + IndexedDB {#sec-persistencia}
+
+### 8.1 Objetivo {#sec-persistencia-objetivo}
+
+Persistir los datos offline-first (@sec-term-offline-first) usando:
+
+* @sec-term-sqljs para ejecutar SQLite
+* @sec-term-indexeddb para guardar/restaurar el archivo SQLite
+
+Se mantiene deliberadamente simple (sin optimizaciones complejas).
+
+### 8.2 Esquema SQL (mínimo) {#sec-sql-schema}
+
+Tablas mínimas requeridas:
+
+* `schema_version(version INTEGER NOT NULL)`
+* `documents(document_id TEXT PRIMARY KEY, title TEXT, raw_text TEXT NOT NULL, created_at INTEGER, updated_at INTEGER)`
+* `units(unit_id TEXT PRIMARY KEY, document_id TEXT NOT NULL, position INTEGER NOT NULL, mode TEXT NOT NULL, original_text TEXT NOT NULL, current_text TEXT NOT NULL, is_deleted INTEGER NOT NULL DEFAULT 0)`
+* `comments(comment_id TEXT PRIMARY KEY, unit_id TEXT NOT NULL, text TEXT NOT NULL, created_at INTEGER)`
+* `reading_state(document_id TEXT PRIMARY KEY, mode TEXT NOT NULL, current_position INTEGER NOT NULL, focus_mode INTEGER NOT NULL DEFAULT 0)`
+
+Índices básicos:
+
+* `units(document_id, mode, position)`
+* `comments(unit_id, created_at)`
+
+### 8.3 Migraciones/versionado (básico) {#sec-migraciones}
+
+* Tabla `schema_version` con un entero.
+* En arranque, si no existe DB, crear y setear versión inicial.
+* Si existe y la versión es menor a la esperada, aplicar scripts incrementales en orden (`001_init.sql`, `002_indexes.sql`, etc.).
+* Mantener pocas migraciones y sin lógica compleja.
+
+Definición: @sec-term-migracion.
+
+### 8.4 Bootstrap DB (estrategia de carga inicial) {#sec-bootstrap}
+
+Secuencia (ver @sec-term-bootstrap-db):
+
+1. Abrir IndexedDB y buscar clave `sqlite_db_bytes`.
+2. Si existe:
+
+   * cargar bytes, inicializar sql.js DB.
+3. Si no existe:
+
+   * crear DB nueva en sql.js.
+4. Aplicar migraciones básicas (@sec-migraciones).
+5. Guardar DB nuevamente en IndexedDB.
+
+La UI muestra @sec-ux-arranque durante esta fase.
+
+### 8.5 Import/Export {#sec-import-export}
+
+#### Exportar DB (.sqlite)
+
+* Extraer bytes del SQLite actual y descargar como archivo.
+* Uso: respaldo completo y restauración exacta.
+
+#### Importar DB (.sqlite)
+
+* Leer archivo, reemplazar bytes en IndexedDB, reiniciar DB en memoria.
+* Debe invalidar cachés UI y reenviar al flujo de @sec-ux-arranque.
+
+#### Exportar Documento (JSON)
+
+* Exportar: documento + unidades (con `current_text`, `is_deleted`) + comentarios + reading_state.
+* Uso: portabilidad por documento, sin llevar toda la DB.
+
+#### Importar Documento (JSON)
+
+* Crear un documento nuevo e insertar unidades/comentarios/estado.
+* No sobreescribir otros documentos salvo decisión explícita (mantener simple: “importar crea nuevo”).
+
+Definición: @sec-term-import-export.
+
+### 8.6 Consideración de tamaño (simple) {#sec-size}
+
+* Se asume “texto típico” (no masivo).
+* Regla UI: no renderizar la lista completa de unidades; mostrar solo la unidad actual (ver @sec-ux-lectura).
+* Regla DB: consultas por `document_id + mode + position` para navegar unitariamente.
+
+## 9. Accesibilidad y teclado {#sec-a11y}
+
+### 9.1 Reglas mínimas A11y {#sec-a11y-min}
+
+* Todo es navegable por teclado (@sec-term-a11y).
+* Botones con `aria-label` cuando el texto no sea suficientemente descriptivo.
+* Modales:
+
+  * `role="dialog"`, `aria-modal="true"`
+  * foco atrapado (@sec-term-foco)
+  * Escape cierra modal (ver @sec-ux-modales)
+
+### 9.2 Atajos de teclado (contrato) {#sec-a11y-teclado}
+
+En lectura (@sec-ux-lectura):
+
+* Enter / Flecha derecha: siguiente
+* Flecha izquierda: anterior
+* E: abrir editar (@sec-ux-c1)
+* Delete/Backspace: abrir confirmación eliminar (@sec-ux-c2)
+* Escape: cerrar modales y volver al contexto anterior
+
+En documento (@sec-ux-documento):
+
+* Ctrl+S: Guardar
+* Ctrl+Enter: Leer
+
+## 10. Entregables esperados (para implementación) {#sec-entregables}
+
+La respuesta/implementación debe incluir:
+
+1. Diagrama de dependencias por capas (ver @sec-dependencias).
+2. Árbol de carpetas (ver @sec-estructura).
+3. SQL mínimo (ver @sec-sql-schema) y migraciones básicas (ver @sec-migraciones).
+4. Contratos TypeScript de puertos (@sec-puertos).
+5. Adaptadores sql.js + IndexedDB (@sec-adaptadores).
+6. Bootstrap/DI (@sec-bootstrap).
+7. UI con páginas y modales que sigan las maquetas ASCII (ver @sec-ux).
+8. Consideraciones offline y A11y (ver @sec-persistencia y @sec-a11y).
+
+# Apéndice: referencias rápidas {#sec-apendice}
+
+* Glosario completo: @sec-glosario
+* UI y estados: @sec-ux
+* Segmentación y reglas del texto: @sec-segmentacion y @sec-reglas-original
+* Modelo de dominio: @sec-modelo-dominio
+* Casos de uso: @sec-casos-uso
+* Arquitectura: @sec-arquitectura
+* Persistencia y bootstrap: @sec-persistencia y @sec-bootstrap
+* Accesibilidad: @sec-a11y
+
+```
