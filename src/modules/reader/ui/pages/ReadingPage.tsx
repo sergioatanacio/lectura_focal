@@ -35,8 +35,9 @@ export function ReadingPage() {
 
   useEffect(() => {
     if (documentId) {
-      container.useCases.startReading
-        .execute({ documentId, mode: 'ORACION' })
+      // Usar GetCurrentUnit en lugar de StartReading para respetar el modo guardado
+      container.useCases.getCurrentUnit
+        .execute(documentId)
         .then((view) => {
           setReadingView(view);
           setLoading(false);

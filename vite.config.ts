@@ -11,5 +11,14 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['sql.js'],
+    esbuildOptions: {
+      target: 'esnext',
+    },
+  },
+  build: {
+    commonjsOptions: {
+      include: [/sql\.js/, /node_modules/],
+      transformMixedEsModules: true,
+    },
   },
 })

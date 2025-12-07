@@ -23,11 +23,11 @@ export function DocumentPage() {
     setError('');
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<string | null> => {
     try {
       if (!text.trim()) {
         setError('Debe ingresar texto antes de guardar');
-        return;
+        return null;
       }
 
       const id = await container.useCases.createDocumentFromText.execute({
@@ -42,24 +42,31 @@ export function DocumentPage() {
       setError('');
 
       await container.dbAdapter.persist();
+      return id;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
+      return null;
     }
   };
 
   const handleRead = async () => {
     try {
-      if (!documentId && text.trim()) {
-        await handleSave();
+      let idToUse = documentId;
+
+      if (!idToUse && text.trim()) {
+        const savedId = await handleSave();
+        if (savedId) {
+          idToUse = savedId;
+        }
       }
 
-      if (!documentId && !text.trim()) {
+      if (!idToUse && !text.trim()) {
         setError('Debe ingresar texto antes de iniciar lectura');
         return;
       }
 
-      if (documentId) {
-        navigate(`/reading/${documentId}`);
+      if (idToUse) {
+        navigate(`/reading/${idToUse}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar lectura');

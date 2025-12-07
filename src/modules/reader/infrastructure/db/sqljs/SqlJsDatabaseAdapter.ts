@@ -84,6 +84,14 @@ export class SqlJsDatabaseAdapter {
     this.indexedDbStore.close();
   }
 
+  private closeWithoutPersist(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+    this.indexedDbStore.close();
+  }
+
   async exportBytes(): Promise<Uint8Array> {
     if (!this.db) {
       throw new DatabaseError('Database no inicializada');
@@ -92,14 +100,16 @@ export class SqlJsDatabaseAdapter {
   }
 
   async importBytes(data: Uint8Array): Promise<void> {
+    // Cerrar sin persistir para no sobrescribir los nuevos bytes
+    this.closeWithoutPersist();
     await this.indexedDbStore.save(data);
-    await this.close();
     await this.initialize();
   }
 
   async reset(): Promise<void> {
+    // Cerrar sin persistir antes de limpiar
+    this.closeWithoutPersist();
     await this.indexedDbStore.clear();
-    await this.close();
     await this.initialize();
   }
 }

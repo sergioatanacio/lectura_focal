@@ -18,35 +18,66 @@ export function useKeyboardNavigation(
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar si el foco está en input, textarea o elemento editable
+      const target = e.target as HTMLElement;
+      const isEditable =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+
+      // Ctrl+S y Ctrl+Enter funcionan siempre
+      if (e.key === 's' && e.ctrlKey) {
+        e.preventDefault();
+        handlers.onSave?.();
+        return;
+      }
+
+      if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        handlers.onRead?.();
+        return;
+      }
+
+      // Escape funciona siempre
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handlers.onEscape?.();
+        return;
+      }
+
+      // Las demás teclas solo funcionan fuera de inputs
+      if (isEditable) return;
+
       if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        handlers.onNext?.();
+        if (handlers.onNext) {
+          e.preventDefault();
+          handlers.onNext();
+        }
       } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        handlers.onNext?.();
+        if (handlers.onNext) {
+          e.preventDefault();
+          handlers.onNext();
+        }
       } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        handlers.onPrev?.();
+        if (handlers.onPrev) {
+          e.preventDefault();
+          handlers.onPrev();
+        }
       } else if (e.key === 'e' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        handlers.onEdit?.();
+        if (handlers.onEdit) {
+          e.preventDefault();
+          handlers.onEdit();
+        }
       } else if (
         (e.key === 'Delete' || e.key === 'Backspace') &&
         !e.ctrlKey &&
         !e.shiftKey &&
         !e.altKey
       ) {
-        e.preventDefault();
-        handlers.onDelete?.();
-      } else if (e.key === 's' && e.ctrlKey) {
-        e.preventDefault();
-        handlers.onSave?.();
-      } else if (e.key === 'Enter' && e.ctrlKey) {
-        e.preventDefault();
-        handlers.onRead?.();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        handlers.onEscape?.();
+        if (handlers.onDelete) {
+          e.preventDefault();
+          handlers.onDelete();
+        }
       }
     };
 
