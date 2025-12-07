@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useContainer } from '@/app/context/ContainerContext';
 import type { Cuaderno } from '../../domain/entities/Cuaderno';
 import type { TextoLecturaListItem } from '../../application/usecases/ListTextosDeLectura';
@@ -8,6 +8,7 @@ export function CuadernoPage() {
   const { cuadernoId } = useParams<{ cuadernoId: string }>();
   const container = useContainer();
   const navigate = useNavigate();
+  const location = useLocation();
   const [cuaderno, setCuaderno] = useState<Cuaderno | null>(null);
   const [textosDeLectura, setTextosDeLectura] = useState<
     TextoLecturaListItem[]
@@ -25,7 +26,7 @@ export function CuadernoPage() {
       loadCuaderno();
       loadTextosDeLectura();
     }
-  }, [cuadernoId]);
+  }, [cuadernoId, location.pathname]);
 
   const loadCuaderno = async () => {
     if (!cuadernoId) return;
