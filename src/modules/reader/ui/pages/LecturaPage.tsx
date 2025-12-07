@@ -188,7 +188,7 @@ export function LecturaPage() {
   const handleDownloadDB = async () => {
     try {
       const data = await container.dbAdapter.exportBytes();
-      const blob = new Blob([data], { type: 'application/octet-stream' });
+      const blob = new Blob([data as BlobPart], { type: 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
