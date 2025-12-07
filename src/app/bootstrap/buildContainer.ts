@@ -34,6 +34,7 @@ import { SetFocusModeV2 } from '@/modules/reader/application/usecases/SetFocusMo
 import { UpdateCuaderno } from '@/modules/reader/application/usecases/UpdateCuaderno';
 import { UpdateTextoDeLectura } from '@/modules/reader/application/usecases/UpdateTextoDeLectura';
 import { GetTextoCompletoConComentarios } from '@/modules/reader/application/usecases/GetTextoCompletoConComentarios';
+import { DeleteTextoDeLectura } from '@/modules/reader/application/usecases/DeleteTextoDeLectura';
 
 export interface Container {
   dbAdapter: SqlJsDatabaseAdapter;
@@ -65,6 +66,7 @@ export interface Container {
     updateCuaderno: UpdateCuaderno;
     updateTextoDeLectura: UpdateTextoDeLectura;
     getTextoCompletoConComentarios: GetTextoCompletoConComentarios;
+    deleteTextoDeLectura: DeleteTextoDeLectura;
   };
 }
 
@@ -166,6 +168,12 @@ export function buildContainer(dbAdapter: SqlJsDatabaseAdapter): Container {
         textoDeLecturaRepo,
         fragmentoRepo,
         commentRepo
+      ),
+      deleteTextoDeLectura: new DeleteTextoDeLectura(
+        textoDeLecturaRepo,
+        fragmentoRepo,
+        estadoLecturaRepo,
+        dbAdapter
       ),
     },
   };

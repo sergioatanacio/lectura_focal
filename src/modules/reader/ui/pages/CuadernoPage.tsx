@@ -99,6 +99,26 @@ export function CuadernoPage() {
     }
   };
 
+  const handleDeleteTexto = async (
+    e: React.MouseEvent,
+    textoLecturaId: string,
+    nombreTexto: string
+  ) => {
+    e.stopPropagation(); // Evitar que se navegue al texto
+
+    const confirmMessage = `¿Estás seguro de que quieres eliminar "${nombreTexto}"?\n\nEsto eliminará:\n- El texto de lectura\n- Todos los fragmentos editados\n- Todo el progreso de lectura\n\nEsta acción NO se puede deshacer.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      await container.useCases.deleteTextoDeLectura.execute(textoLecturaId);
+      await loadTextosDeLectura();
+    } catch (error) {
+      console.error('Error eliminando texto:', error);
+      alert('Error al eliminar el texto de lectura');
+    }
+  };
+
   return (
     <div className="cuaderno-page">
       <div className="cuaderno-header">
@@ -194,14 +214,30 @@ export function CuadernoPage() {
         ) : (
           <ul>
             {textosDeLectura.map((texto) => (
-              <li key={texto.texto_lectura_id}>
+              <li key={texto.texto_lectura_id} className="texto-item">
                 <button
+                  className="texto-item-button"
                   onClick={() => navigate(`/lectura/${texto.texto_lectura_id}`)}
                 >
-                  {texto.nombre || `Texto (${texto.modo_segmentacion})`}
+                  <span className="texto-nombre">
+                    {texto.nombre || `Texto (${texto.modo_segmentacion})`}
+                  </span>
                   <span className="text-meta">
                     {new Date(texto.created_at).toLocaleDateString()}
                   </span>
+                </button>
+                <button
+                  className="btn-delete-texto"
+                  onClick={(e) =>
+                    handleDeleteTexto(
+                      e,
+                      texto.texto_lectura_id,
+                      texto.nombre || `Texto (${texto.modo_segmentacion})`
+                    )
+                  }
+                  title="Eliminar texto"
+                >
+                  🗑️
                 </button>
               </li>
             ))}
