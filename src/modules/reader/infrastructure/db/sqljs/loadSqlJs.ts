@@ -7,24 +7,31 @@ let sqlJsInstance: SqlJsStatic | null = null;
 
 export async function getSqlJs(): Promise<SqlJsStatic> {
   if (!sqlJsInstance) {
-    // Importación dinámica para evitar problemas con ESM
-    const sqlJsModule = await import('sql.js');
+    try {
+      // Importación dinámica con destructuring del módulo completo
+      const sqlJsModule = await import('sql.js');
 
-    // sql.js puede exportar como default o como módulo completo
-    const initSqlJs =
-      typeof sqlJsModule.default === 'function'
-        ? sqlJsModule.default
-        : (sqlJsModule as any);
+      // sql.js exporta la función directamente en el módulo, no como default
+      // Necesitamos obtener la función init del módulo
+      const initSqlJs = (sqlJsModule as any).default || sqlJsModule;
 
-    if (typeof initSqlJs !== 'function') {
-      throw new Error('No se pudo cargar initSqlJs');
+      if (typeof initSqlJs !== 'function') {
+        console.error('sql.js module:', sqlJsModule);
+        throw new Error('initSqlJs no es una función. Tipo: ' + typeof initSqlJs);
+      }
+
+      // Usar BASE_URL para compatibilidad con subdirectorios y file://
+      const baseUrl = import.meta.env.BASE_URL || '/';
+
+      sqlJsInstance = await initSqlJs({
+        locateFile: (file) => `${baseUrl}${file}`,
+      });
+    } catch (error) {
+      console.error('Error loading sql.js:', error);
+      throw new Error(
+        `No se pudo cargar sql.js: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
-
-    // Usar BASE_URL para compatibilidad con subdirectorios y file://
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    sqlJsInstance = await initSqlJs({
-      locateFile: (file) => `${baseUrl}${file}`,
-    });
   }
   return sqlJsInstance;
 }

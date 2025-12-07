@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ['sql.js'],
+    include: ['sql.js'],
     esbuildOptions: {
       target: 'esnext',
     },
