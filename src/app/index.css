@@ -122,6 +122,54 @@ select:focus {
   background-color: #e9ecef;
 }
 
+/* Sidebar footer (Database actions) */
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd;
+}
+
+.sidebar-footer h3 {
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.db-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.db-actions button {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.db-actions button:hover {
+  background-color: #f8f9fa;
+}
+
+.db-actions .btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
+}
+
+.db-actions .btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
 .main-content {
   flex: 1;
   padding: 2rem;

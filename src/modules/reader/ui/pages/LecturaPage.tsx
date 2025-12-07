@@ -185,74 +185,6 @@ export function LecturaPage() {
     }
   };
 
-  const handleDownloadDB = async () => {
-    try {
-      const data = await container.dbAdapter.exportBytes();
-      const blob = new Blob([data as BlobPart], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `lectura-oracion-${Date.now()}.db`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error descargando BD:', error);
-      alert('Error al descargar la base de datos');
-    }
-  };
-
-  const handleUploadDB = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.db';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        await container.dbAdapter.importBytes(uint8Array);
-        alert('Base de datos cargada exitosamente. Recargando página...');
-        window.location.reload();
-      } catch (error) {
-        console.error('Error cargando BD:', error);
-        alert('Error al cargar la base de datos');
-      }
-    };
-    input.click();
-  };
-
-  const handleResetDB = async () => {
-    const confirmMessage =
-      '⚠️ ADVERTENCIA: Esta acción eliminará TODA la base de datos y todos los textos guardados.\n\n' +
-      'Esta acción NO se puede deshacer.\n\n' +
-      '¿Estás seguro de que quieres continuar?';
-
-    if (!confirm(confirmMessage)) return;
-
-    const doubleConfirm = confirm(
-      '⚠️ ÚLTIMA CONFIRMACIÓN\n\n' +
-        'Se eliminarán permanentemente:\n' +
-        '- Todos los cuadernos\n' +
-        '- Todos los textos de lectura\n' +
-        '- Todos los comentarios\n' +
-        '- Todo el progreso de lectura\n\n' +
-        '¿Realmente deseas eliminar TODO?'
-    );
-
-    if (!doubleConfirm) return;
-
-    try {
-      await container.dbAdapter.reset();
-      alert('Base de datos eliminada exitosamente. Recargando página...');
-      window.location.reload();
-    } catch (error) {
-      console.error('Error reseteando BD:', error);
-      alert('Error al resetear la base de datos');
-    }
-  };
-
   useKeyboardNavigation({
     onNext: view?.has_next ? handleNext : undefined,
     onPrev: view?.has_prev ? handlePrev : undefined,
@@ -330,19 +262,6 @@ export function LecturaPage() {
             </button>
             <button onClick={handleExportText} title="Exportar como Markdown">
               💾 Exportar Texto
-            </button>
-            <button onClick={handleDownloadDB} title="Descargar base de datos">
-              ⬇️ Descargar BD
-            </button>
-            <button onClick={handleUploadDB} title="Cargar base de datos">
-              ⬆️ Cargar BD
-            </button>
-            <button
-              onClick={handleResetDB}
-              title="Eliminar toda la base de datos"
-              style={{ backgroundColor: '#dc3545', color: 'white' }}
-            >
-              🗑️ Resetear BD
             </button>
           </div>
         </>

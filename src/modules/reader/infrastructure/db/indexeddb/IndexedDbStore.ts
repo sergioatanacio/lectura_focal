@@ -75,8 +75,9 @@ export class IndexedDbStore {
   }
 
   async clear(): Promise<void> {
+    // Si no está abierta, abrirla primero
     if (!this.db) {
-      throw new DatabaseError('IndexedDB no está abierta');
+      await this.open();
     }
 
     return new Promise((resolve, reject) => {
