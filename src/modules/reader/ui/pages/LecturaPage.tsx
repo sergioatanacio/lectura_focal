@@ -223,6 +223,36 @@ export function LecturaPage() {
     input.click();
   };
 
+  const handleResetDB = async () => {
+    const confirmMessage =
+      '⚠️ ADVERTENCIA: Esta acción eliminará TODA la base de datos y todos los textos guardados.\n\n' +
+      'Esta acción NO se puede deshacer.\n\n' +
+      '¿Estás seguro de que quieres continuar?';
+
+    if (!confirm(confirmMessage)) return;
+
+    const doubleConfirm = confirm(
+      '⚠️ ÚLTIMA CONFIRMACIÓN\n\n' +
+        'Se eliminarán permanentemente:\n' +
+        '- Todos los cuadernos\n' +
+        '- Todos los textos de lectura\n' +
+        '- Todos los comentarios\n' +
+        '- Todo el progreso de lectura\n\n' +
+        '¿Realmente deseas eliminar TODO?'
+    );
+
+    if (!doubleConfirm) return;
+
+    try {
+      await container.dbAdapter.reset();
+      alert('Base de datos eliminada exitosamente. Recargando página...');
+      window.location.reload();
+    } catch (error) {
+      console.error('Error reseteando BD:', error);
+      alert('Error al resetear la base de datos');
+    }
+  };
+
   useKeyboardNavigation({
     onNext: view?.has_next ? handleNext : undefined,
     onPrev: view?.has_prev ? handlePrev : undefined,
@@ -306,6 +336,13 @@ export function LecturaPage() {
             </button>
             <button onClick={handleUploadDB} title="Cargar base de datos">
               ⬆️ Cargar BD
+            </button>
+            <button
+              onClick={handleResetDB}
+              title="Eliminar toda la base de datos"
+              style={{ backgroundColor: '#dc3545', color: 'white' }}
+            >
+              🗑️ Resetear BD
             </button>
           </div>
         </>
